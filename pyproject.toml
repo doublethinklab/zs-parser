@@ -1,14 +1,15 @@
 [project]
-name = "fb-ndjson-parser"
+name = "zs-parser"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "click>=8.2.1",
+    "jsonpath-ng>=1.7.0",
     "ndjson>=0.3.1",
 ]
 
 
 [project.scripts]
-parser = "main:main"
+zs-parser = "zs_parser.main:main"
