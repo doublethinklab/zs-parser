@@ -1,7 +1,7 @@
 ## Usage 
 
 Clone the repo,
-``````
+```
 pip install . 
 ```
 
