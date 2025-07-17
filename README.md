@@ -1,7 +1,12 @@
 ## Usage 
 
+Clone the repo,
+``````
+pip install . 
 ```
-parser data.ndjson
-parser data.json > out.csv
-cat data.ndjson | parser
+
+```
+zs-parser data.ndjson
+zs-parser data.json > out.json
+cat data.ndjson | zs-parser
 ```
