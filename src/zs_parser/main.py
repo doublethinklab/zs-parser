@@ -38,13 +38,13 @@ def load_data(input_stream) -> List[Dict]:
     try:
         data = orjson.loads(raw)
         if isinstance(data, list) and all(isinstance(i, dict) for i in data):
-            click.echo("Detected JSON array")
+            click.echo("Detected JSON array", err=True)
             return data
     except orjson.JSONDecodeError:
         pass
 
     input_stream = io.StringIO(raw)
-    click.echo("Detected NDJSON array")
+    click.echo("Detected NDJSON array", err=True)
     return read_ndjson_input(input_stream)
 
 
