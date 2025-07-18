@@ -3,6 +3,16 @@ from typing import Dict, List
 from jsonpath_ng.ext import parse
 
 
+def remove_duplicates_by_key(json_list, key):
+    seen = set()
+    result = []
+    for item in json_list:
+        value = item.get(key)
+        if value not in seen:
+            seen.add(value)
+            result.append(item)
+    return result
+
 def fb_parser(lst: List[Dict]) -> List[Dict]:
     result_data = []
     for x in lst:
@@ -12,8 +22,8 @@ def fb_parser(lst: List[Dict]) -> List[Dict]:
         creation_time = datetime.fromtimestamp(min(extract_json_path(data, '$..story.creation_time'))).strftime("%Y-%m-%d %H:%M:%S")
         attachments = list(set(extract_json_path(data, '$..attachments..url')))  # attachments..uri
 
-
-        text = extract_json_path(data, "comet_sections.content.story.message.text") # comet_sections.content.story.message.text
+        text = extract_json_path(data, "comet_sections.content.story.message.text")
+        # comet_sections.content.story.message.text
 
         reaction_counts = extract_json_path(data, '$..comet_ufi_summary_and_actions_renderer.feedback.top_reactions.edges')
         if reaction_counts:
@@ -37,6 +47,9 @@ def fb_parser(lst: List[Dict]) -> List[Dict]:
                 "share_count": share_count
             }
         )
+    print(f"Data count: {len(result_data)}")
+    result_data = remove_duplicates_by_key(result_data, 'post_id')
+    print(f"Data count: {len(result_data)}")
     return result_data
 
 

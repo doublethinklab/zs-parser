@@ -79,6 +79,8 @@ def main(input_file):
         return
 
     parsed_data = fb_parser(raw_data)
+
+    # Exporting
     to_file = sys.stdout.isatty()
     output_path = Path("output.json") if to_file else None
 
