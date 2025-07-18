@@ -61,7 +61,9 @@ def main(input_file):
       head -n 5 data.ndjson | zs-parser
     """
     if input_file:
-        click.echo(f"Input file: {input_file.name}", err=True)
+        file_path = Path(input_file.name)
+        file_size_mb = file_path.stat().st_size / 1024 / 1024
+        click.echo(f"Input file: {input_file.name} ({file_size_mb:.2f} MB)", err=True)
         input_stream = input_file
     elif not sys.stdin.isatty():
         click.echo("Read file from stdin", err=True)
