@@ -61,8 +61,10 @@ def main(input_file):
       head -n 5 data.ndjson | zs-parser
     """
     if input_file:
+        click.echo(f"Input file: {input_file.name}", err=True)
         input_stream = input_file
     elif not sys.stdin.isatty():
+        click.echo("Read file from stdin", err=True)
         input_stream = sys.stdin
     else:
         click.echo("Please provide JSON/NDJSON file or pipe in", err=True)
@@ -97,7 +99,7 @@ def main(input_file):
         bar.update(len(parsed_data))
 
     if to_file:
-        click.echo(f"\n✅ Exported JSON to：{output_path}")
+        click.echo(f"\nExported JSON to：{output_path}", err=True)
 
 
 if __name__ == "__main__":

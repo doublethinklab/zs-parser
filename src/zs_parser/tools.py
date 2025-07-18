@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Dict, List
 from jsonpath_ng.ext import parse
+import click
 
 
 def remove_duplicates_by_key(json_list, key):
@@ -47,10 +48,10 @@ def fb_parser(lst: List[Dict]) -> List[Dict]:
                 "share_count": share_count
             }
         )
-    print(f"Data count: {len(result_data)}")
-    result_data = remove_duplicates_by_key(result_data, 'post_id')
-    print(f"Data count: {len(result_data)}")
-    return result_data
+    click.echo(f"Data count: {len(result_data)}", err=True)
+    result_data_ = remove_duplicates_by_key(result_data, 'post_id')
+    click.echo(f"Data count: {len(result_data_)}", err=True)
+    return result_data_
 
 
 
