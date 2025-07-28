@@ -4,7 +4,7 @@ from typing import List, Dict, Union
 import orjson
 import click
 from pathlib import Path
-from zs_parser.tools import fb_parser
+from zs_parser.tools import general_parser
 
 
 def read_ndjson_input(source: Union[str, io.TextIOBase]) -> list[dict]:
@@ -82,7 +82,7 @@ def main(input_file):
         click.echo("No data in file", err=True)
         return
 
-    parsed_data = fb_parser(raw_data)
+    parsed_data = general_parser(raw_data)
 
     # Exporting
     to_file = sys.stdout.isatty()
