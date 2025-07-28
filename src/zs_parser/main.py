@@ -4,7 +4,7 @@ from typing import List, Dict, Union
 import orjson
 import click
 from pathlib import Path
-from zs_parser.tools import fb_parser
+from tools import general_parser
 
 
 def read_ndjson_input(source: Union[str, io.TextIOBase]) -> list[dict]:
@@ -37,6 +37,9 @@ def load_data(input_stream) -> List[Dict]:
     raw = input_stream.read()
     try:
         data = orjson.loads(raw)
+        if isinstance(data, dict):
+            click.echo("Detected JSON object", err=True)
+            return [data]
         if isinstance(data, list) and all(isinstance(i, dict) for i in data):
             click.echo("Detected JSON array", err=True)
             return data
@@ -82,7 +85,7 @@ def main(input_file):
         click.echo("No data in file", err=True)
         return
 
-    parsed_data = fb_parser(raw_data)
+    parsed_data = general_parser(raw_data)
 
     # Exporting
     to_file = sys.stdout.isatty()

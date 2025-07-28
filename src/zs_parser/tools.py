@@ -4,6 +4,15 @@ from jsonpath_ng.ext import parse
 import click
 
 
+def safe_int(val):
+    if isinstance(val, str):
+        val = val.replace(',', '')
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return 0
+
+
 def remove_duplicates_by_key(json_list, key):
     seen = set()
     result = []
@@ -14,10 +23,57 @@ def remove_duplicates_by_key(json_list, key):
             result.append(item)
     return result
 
+def tk_parser(lst: List[Dict]) -> List[Dict]:
+    result_data = []
+    for x in lst:
+        data = x.get('data', {})
+        
+        post_id = data.get('id')
+        post_url = x.get('source_platform_url')
+        creation_time = datetime.fromtimestamp(data.get('createTime', 0)).strftime("%Y-%m-%d %H:%M:%S")
+        
+        attachments = []
+        if data.get('video', {}).get('playAddr'):
+            attachments.append(data['video']['playAddr'])
+        if data.get('video', {}).get('cover'):
+            attachments.append(data['video']['cover'])
+        
+        text = data.get('desc', '')
+        
+        author_info = data.get('author', {})
+        author_name = author_info.get('nickname', '')
+        author_id = author_info.get('uniqueId', '')
+        
+        stats = data.get('stats', {})
+        like_count = safe_int(stats.get('diggCount', 0))
+        comment_count = safe_int(stats.get('commentCount', 0))
+        share_count = safe_int(stats.get('shareCount', 0))
+        play_count = safe_int(stats.get('playCount', 0))
+        
+        result_data.append({
+            "post_id": post_id,
+            "post_url": post_url,
+            "creation_time": creation_time,
+            "attachments": attachments,
+            "text": text,
+            "author_name": author_name,
+            "author_id": author_id,
+            "like_count": like_count,
+            "comment_count": comment_count,
+            "share_count": share_count,
+            "play_count": play_count
+        })
+    
+    click.echo(f"Original Data count: {len(result_data)}", err=True)
+    result_data_ = remove_duplicates_by_key(result_data, 'post_id')
+    click.echo(f"Deduplicated Data count: {len(result_data_)}", err=True)
+    return result_data_
+
+
 def fb_parser(lst: List[Dict]) -> List[Dict]:
     result_data = []
     for x in lst:
-        data = x.get('data', [])
+        data = x.get('data', {})
         post_id = data.get('post_id')
         post_url = extract_json_path(data, '$..wwwURL')
         creation_time = datetime.fromtimestamp(min(extract_json_path(data, '$..story.creation_time'))).strftime("%Y-%m-%d %H:%M:%S")
@@ -34,7 +90,7 @@ def fb_parser(lst: List[Dict]) -> List[Dict]:
             reactions = []
             total_reaction_count = 0
         comment_count = extract_json_path(data, "$..comments_count_summary_renderer.feedback.comment_rendering_instance.comments.total_count")
-        share_count = int(extract_json_path(data, '$..i18n_share_count')[0])
+        share_count = safe_int(extract_json_path(data, '$..i18n_share_count')[0])
         result_data.append(
             {
                 "post_id": post_id,
@@ -48,13 +104,28 @@ def fb_parser(lst: List[Dict]) -> List[Dict]:
                 "share_count": share_count
             }
         )
-    click.echo(f"Data count: {len(result_data)}", err=True)
+    click.echo(f"Original Data count: {len(result_data)}", err=True)
     result_data_ = remove_duplicates_by_key(result_data, 'post_id')
-    click.echo(f"Data count: {len(result_data_)}", err=True)
+    click.echo(f"Deduplicated Data count: {len(result_data_)}", err=True)
     return result_data_
 
 
-
+def general_parser(lst: List[Dict]) -> List[Dict]:
+    if not lst:
+        return []
+    
+    first_item = lst[0]
+    source_platform = first_item.get('source_platform', '')
+    
+    if 'facebook' in source_platform.lower():
+        click.echo(f"Using Facebook parser for platform: {source_platform}", err=True)
+        return fb_parser(lst)
+    elif 'tiktok' in source_platform.lower():
+        click.echo(f"Using TikTok parser for platform: {source_platform}", err=True)
+        return tk_parser(lst)
+    else:
+        click.echo(f"Unknown platform: {source_platform}, falling back to Facebook parser", err=True)
+        return fb_parser(lst)
 
 
 def extract_json_path(data: Dict, path: str) -> List:
