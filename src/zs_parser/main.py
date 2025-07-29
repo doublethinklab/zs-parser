@@ -53,7 +53,8 @@ def load_data(input_stream) -> List[Dict]:
 
 @click.command()
 @click.argument('input_file', required=False, type=click.File('r', encoding='utf-8'))
-def main(input_file):
+@click.option('--output', '-o', type=str, help='Output filename (optional)')
+def main(input_file, output):
     """
     Decode Zeeshuimer data to JSON array。
 
@@ -89,7 +90,13 @@ def main(input_file):
 
     # Exporting
     to_file = sys.stdout.isatty()
-    output_path = Path("output.json") if to_file else None
+    if to_file:
+        if output:
+            output_path = Path(output)
+        else:
+            output_path = Path("output.json")
+    else:
+        output_path = None
 
     with click.progressbar(length=len(parsed_data)) as bar:
         json_bytes = orjson.dumps(parsed_data, option=orjson.OPT_INDENT_2 | orjson.OPT_NON_STR_KEYS)

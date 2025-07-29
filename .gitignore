@@ -1,13 +1,46 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Electron build outputs
 dist/
-wheels/
-data/
-*.egg-info
-*.json
-.python-version
+build/
+*.exe
+*.dmg
+*.app
+
+# Temporary files
+*.tmp
+*_parsed_*.json
+output.json
+
+# IDE files
 .idea/
-# Virtual environments
-.venv
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.pytest_cache/
+.coverage
+.venv/
+venv/
+
+# Test files
+test.json
+政客爽.json
+
+# Log files
+*.log

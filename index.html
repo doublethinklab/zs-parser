@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZS Parser</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ZS Parser</h1>
+            <p>Drag and drop NDJSON files to parse</p>
+        </header>
+
+        <main>
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-content">
+                    <div class="drop-icon">📁</div>
+                    <h3>Drop files here</h3>
+                    <p>Supports .ndjson, .json formats</p>
+                    <button class="browse-btn" id="browseBtn">Browse Files</button>
+                    <input type="file" id="fileInput" accept=".ndjson,.json" style="display: none;">
+                </div>
+            </div>
+
+            <div class="status-section" id="statusSection" style="display: none;">
+                <div class="status-item">
+                    <span class="status-label">File:</span>
+                    <span class="status-value" id="fileName">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Status:</span>
+                    <span class="status-value" id="parseStatus">Waiting</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Records:</span>
+                    <span class="status-value" id="dataCount">-</span>
+                </div>
+            </div>
+
+            <div class="logs-section" id="logsSection" style="display: none;">
+                <h3>Parsing Logs</h3>
+                <div class="logs-content" id="logsContent"></div>
+            </div>
+
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <div class="results-header">
+                    <h3>Parsing Results</h3>
+                    <div class="results-actions">
+                        <button class="action-btn" id="saveBtn">💾 Save File</button>
+                        <button class="action-btn" id="copyBtn">📋 Copy JSON</button>
+                    </div>
+                </div>
+                
+                <div class="drag-out-zone" id="dragOutZone">
+                    <div class="drag-out-content">
+                        <div class="drag-out-icon">📄</div>
+                        <h4>Drag this area to export results</h4>
+                        <p id="resultSummary">Ready to export...</p>
+                    </div>
+                </div>
+
+                <div class="results-preview">
+                    <h4>Data Preview (First 3 Records)</h4>
+                    <pre id="resultsPreview"></pre>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
