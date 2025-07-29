@@ -89,14 +89,16 @@ def main(input_file, output):
     parsed_data = general_parser(raw_data)
 
     # Exporting
-    to_file = sys.stdout.isatty()
-    if to_file:
-        if output:
-            output_path = Path(output)
-        else:
-            output_path = Path("output.json")
+    # If output is specified, always write to file regardless of stdout
+    if output:
+        to_file = True
+        output_path = Path(output)
     else:
-        output_path = None
+        to_file = sys.stdout.isatty()
+        if to_file:
+            output_path = Path("output.json")
+        else:
+            output_path = None
 
     with click.progressbar(length=len(parsed_data)) as bar:
         json_bytes = orjson.dumps(parsed_data, option=orjson.OPT_INDENT_2 | orjson.OPT_NON_STR_KEYS)
