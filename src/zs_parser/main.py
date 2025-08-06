@@ -1,5 +1,6 @@
 import io
 import sys
+import os
 from typing import List, Dict, Union
 import orjson
 import click
@@ -54,17 +55,21 @@ def load_data(input_stream) -> List[Dict]:
 @click.command()
 @click.argument('input_file', required=False, type=click.File('r', encoding='utf-8'))
 @click.option('--output', '-o', type=str, help='Output filename (optional)')
-@click.option('--format', '-f', type=click.Choice(['json', 'csv']), default='json', help='Output format (json or csv)')
+@click.option('--format', '-f', type=click.Choice(['json', 'csv']), default=None, help='Output format (json or csv)')
 def main(input_file, output, format):
     """
     Decode Zeeshuimer data to JSON array or CSV format。
 
     Usage：
-      zs-parser data.ndjson
-      zs-parser data.json > out.json
-      zs-parser data.ndjson --format csv -o output.csv
-      cat data.ndjson | zs-parser --format csv
-      head -n 5 data.ndjson | zs-parser
+      zs-parser data.ndjson                           # Interactive: saves to output.json
+      zs-parser data.ndjson > output.txt              # Redirect: outputs CSV format
+      zs-parser data.ndjson -o output.csv             # Infers CSV from .csv extension
+      zs-parser data.ndjson -o output.json            # Infers JSON from .json extension
+      zs-parser data.ndjson --format csv -o output.csv # Explicit CSV format
+      
+      For redirect format detection:
+      ZS_PARSER_OUTPUT_FILE=output.csv zs-parser data.ndjson > output.csv
+      ZS_PARSER_OUTPUT_FILE=output.json zs-parser data.ndjson > output.json
     """
     if input_file:
         file_path = Path(input_file.name)
@@ -89,6 +94,35 @@ def main(input_file, output, format):
         return
 
     parsed_data = general_parser(raw_data)
+
+    # Determine format if not explicitly specified
+    if format is None:
+        if output:
+            # Infer format from output file extension
+            output_ext = Path(output).suffix.lower()
+            if output_ext == '.csv':
+                format = 'csv'
+            else:
+                format = 'json'
+        else:
+            # Check environment variable for redirect target hint
+            redirect_target = os.environ.get('ZS_PARSER_OUTPUT_FILE')
+            if redirect_target:
+                # Infer format from redirect target file extension
+                redirect_ext = Path(redirect_target).suffix.lower()
+                if redirect_ext == '.csv':
+                    format = 'csv'
+                elif redirect_ext == '.json':
+                    format = 'json'
+                else:
+                    format = 'csv'  # Default for unknown extensions when redirected
+            else:
+                # If output goes to stdout (redirected), default to CSV
+                # If output goes to TTY (interactive), default to JSON
+                if sys.stdout.isatty():
+                    format = 'json'
+                else:
+                    format = 'csv'
 
     # Exporting
     # If output is specified, always write to file regardless of stdout
