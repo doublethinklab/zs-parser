@@ -4,7 +4,7 @@ from typing import List, Dict, Union
 import orjson
 import click
 from pathlib import Path
-from tools import general_parser
+from tools import general_parser, write_csv_output
 
 
 def read_ndjson_input(source: Union[str, io.TextIOBase]) -> list[dict]:
@@ -54,14 +54,16 @@ def load_data(input_stream) -> List[Dict]:
 @click.command()
 @click.argument('input_file', required=False, type=click.File('r', encoding='utf-8'))
 @click.option('--output', '-o', type=str, help='Output filename (optional)')
-def main(input_file, output):
+@click.option('--format', '-f', type=click.Choice(['json', 'csv']), default='json', help='Output format (json or csv)')
+def main(input_file, output, format):
     """
-    Decode Zeeshuimer data to JSON array。
+    Decode Zeeshuimer data to JSON array or CSV format。
 
     Usage：
       zs-parser data.ndjson
       zs-parser data.json > out.json
-      cat data.ndjson | zs-parser
+      zs-parser data.ndjson --format csv -o output.csv
+      cat data.ndjson | zs-parser --format csv
       head -n 5 data.ndjson | zs-parser
     """
     if input_file:
@@ -96,24 +98,36 @@ def main(input_file, output):
     else:
         to_file = sys.stdout.isatty()
         if to_file:
-            output_path = Path("output.json")
+            if format == 'csv':
+                output_path = Path("output.csv")
+            else:
+                output_path = Path("output.json")
         else:
             output_path = None
 
     with click.progressbar(length=len(parsed_data)) as bar:
-        json_bytes = orjson.dumps(parsed_data, option=orjson.OPT_INDENT_2 | orjson.OPT_NON_STR_KEYS)
-
-        if to_file:
-            with output_path.open("wb") as f:
-                f.write(json_bytes)
+        if format == 'csv':
+            if to_file:
+                csv_content = write_csv_output(parsed_data, str(output_path))
+            else:
+                csv_content = write_csv_output(parsed_data)
+                sys.stdout.write(csv_content)
         else:
-            sys.stdout.buffer.write(json_bytes)
-            sys.stdout.buffer.write(b"\n")
+            json_bytes = orjson.dumps(parsed_data, option=orjson.OPT_INDENT_2 | orjson.OPT_NON_STR_KEYS)
+            if to_file:
+                with output_path.open("wb") as f:
+                    f.write(json_bytes)
+            else:
+                sys.stdout.buffer.write(json_bytes)
+                sys.stdout.buffer.write(b"\n")
 
         bar.update(len(parsed_data))
 
     if to_file:
-        click.echo(f"\nExported JSON to：{output_path}", err=True)
+        if format == 'csv':
+            click.echo(f"\nExported CSV to：{output_path}", err=True)
+        else:
+            click.echo(f"\nExported JSON to：{output_path}", err=True)
 
 
 if __name__ == "__main__":

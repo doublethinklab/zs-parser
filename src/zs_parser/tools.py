@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import Dict, List
 from jsonpath_ng.ext import parse
 import click
+import csv
+import io
 
 
 def safe_int(val):
@@ -132,3 +134,37 @@ def extract_json_path(data: Dict, path: str) -> List:
     json_path = parse(path)
     m = json_path.find(data)
     return [match.value for match in m]
+
+
+def write_csv_output(data: List[Dict], output_file: str = None) -> str:
+    if not data:
+        return ""
+    
+    output = io.StringIO()
+    fieldnames = data[0].keys()
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    
+    for row in data:
+        flattened_row = {}
+        for key, value in row.items():
+            if isinstance(value, list):
+                if key == 'attachments':
+                    flattened_row[key] = '; '.join(str(v) for v in value)
+                elif key == 'reactions':
+                    reactions_str = '; '.join([f"{list(r.keys())[0]}:{list(r.values())[0]}" for r in value]) if value else ""
+                    flattened_row[key] = reactions_str
+                else:
+                    flattened_row[key] = '; '.join(str(v) for v in value)
+            else:
+                flattened_row[key] = str(value) if value is not None else ""
+        writer.writerow(flattened_row)
+    
+    csv_content = output.getvalue()
+    output.close()
+    
+    if output_file:
+        with open(output_file, 'w', newline='', encoding='utf-8') as f:
+            f.write(csv_content)
+    
+    return csv_content
