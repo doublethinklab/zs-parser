@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import Dict, List
 from jsonpath_ng.ext import parse
 import click
+import csv
+import io
 
 
 def safe_int(val):
@@ -76,7 +78,11 @@ def fb_parser(lst: List[Dict]) -> List[Dict]:
         data = x.get('data', {})
         post_id = data.get('post_id')
         post_url = extract_json_path(data, '$..wwwURL')
-        creation_time = datetime.fromtimestamp(min(extract_json_path(data, '$..story.creation_time'))).strftime("%Y-%m-%d %H:%M:%S")
+        creation_times = extract_json_path(data, '$..story.creation_time')
+        if creation_times:
+            creation_time = datetime.fromtimestamp(min(creation_times)).strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            creation_time = "Unknown"
         attachments = list(set(extract_json_path(data, '$..attachments..url')))  # attachments..uri
 
         text = extract_json_path(data, "comet_sections.content.story.message.text")
@@ -89,8 +95,11 @@ def fb_parser(lst: List[Dict]) -> List[Dict]:
         else:
             reactions = []
             total_reaction_count = 0
-        comment_count = extract_json_path(data, "$..comments_count_summary_renderer.feedback.comment_rendering_instance.comments.total_count")
-        share_count = safe_int(extract_json_path(data, '$..i18n_share_count')[0])
+        comment_count_results = extract_json_path(data, "$..comments_count_summary_renderer.feedback.comment_rendering_instance.comments.total_count")
+        comment_count = comment_count_results[0] if comment_count_results else 0
+        
+        share_count_results = extract_json_path(data, '$..i18n_share_count')
+        share_count = safe_int(share_count_results[0]) if share_count_results else 0
         result_data.append(
             {
                 "post_id": post_id,
@@ -132,3 +141,37 @@ def extract_json_path(data: Dict, path: str) -> List:
     json_path = parse(path)
     m = json_path.find(data)
     return [match.value for match in m]
+
+
+def write_csv_output(data: List[Dict], output_file: str = None) -> str:
+    if not data:
+        return ""
+    
+    output = io.StringIO()
+    fieldnames = data[0].keys()
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    
+    for row in data:
+        flattened_row = {}
+        for key, value in row.items():
+            if isinstance(value, list):
+                if key == 'attachments':
+                    flattened_row[key] = '; '.join(str(v) for v in value)
+                elif key == 'reactions':
+                    reactions_str = '; '.join([f"{list(r.keys())[0]}:{list(r.values())[0]}" for r in value]) if value else ""
+                    flattened_row[key] = reactions_str
+                else:
+                    flattened_row[key] = '; '.join(str(v) for v in value)
+            else:
+                flattened_row[key] = str(value) if value is not None else ""
+        writer.writerow(flattened_row)
+    
+    csv_content = output.getvalue()
+    output.close()
+    
+    if output_file:
+        with open(output_file, 'w', newline='', encoding='utf-8') as f:
+            f.write(csv_content)
+    
+    return csv_content

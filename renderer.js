@@ -3,6 +3,7 @@ class ZSParser {
         this.currentData = null;
         this.currentTempFile = null;
         this.currentFileName = null;
+        this.currentFormat = 'csv';
         this.initializeElements();
         this.setupEventListeners();
     }
@@ -11,6 +12,7 @@ class ZSParser {
         this.dropZone = document.getElementById('dropZone');
         this.fileInput = document.getElementById('fileInput');
         this.browseBtn = document.getElementById('browseBtn');
+        this.formatRadios = document.querySelectorAll('input[name="format"]');
         this.statusSection = document.getElementById('statusSection');
         this.logsSection = document.getElementById('logsSection');
         this.resultsSection = document.getElementById('resultsSection');
@@ -40,6 +42,11 @@ class ZSParser {
 
         // File input change
         this.fileInput.addEventListener('change', this.handleFileSelect.bind(this));
+
+        // Format selection
+        this.formatRadios.forEach(radio => {
+            radio.addEventListener('change', this.handleFormatChange.bind(this));
+        });
 
         // Action buttons
         this.saveBtn.addEventListener('click', this.saveFile.bind(this));
@@ -75,6 +82,10 @@ class ZSParser {
         }
     }
 
+    handleFormatChange(e) {
+        this.currentFormat = e.target.value;
+    }
+
     async processFile(file) {
         if (!this.isValidFile(file)) {
             this.showError('Please select .ndjson or .json files');
@@ -93,12 +104,22 @@ class ZSParser {
         this.hideSection(this.resultsSection);
 
         try {
-            const result = await window.electronAPI.parseFile(file.path);
+            const result = await window.electronAPI.parseFile(file.path, this.currentFormat);
             
             if (result.success) {
                 this.currentData = result.data;
                 this.currentTempFile = result.outputPath;
-                this.updateStatus('success', file.name, 'Parsing completed', result.data.length);
+                this.currentFormat = result.format || this.currentFormat;
+                
+                // Calculate record count based on format
+                let recordCount;
+                if (this.currentFormat === 'csv') {
+                    recordCount = result.data.split('\n').length - 2; // -2 for header and empty last line
+                } else {
+                    recordCount = Array.isArray(result.data) ? result.data.length : 1;
+                }
+                
+                this.updateStatus('success', file.name, 'Parsing completed', recordCount);
                 this.showLogs(result.logs);
                 this.showResults(result.data);
             } else {
@@ -134,12 +155,24 @@ class ZSParser {
     showResults(data) {
         this.showSection(this.resultsSection);
         
-        // Update result summary
-        this.resultSummary.textContent = `${data.length} records ready to export`;
-        
-        // Show preview (first 3 items)
-        const preview = data.slice(0, 3);
-        this.resultsPreview.textContent = JSON.stringify(preview, null, 2);
+        if (this.currentFormat === 'csv') {
+            // CSV format handling
+            const lines = data.split('\n').filter(line => line.trim());
+            const recordCount = Math.max(0, lines.length - 1); // -1 for header
+            this.resultSummary.textContent = `${recordCount} records ready to export`;
+            
+            // Show preview (first 4 lines including header)
+            const previewLines = lines.slice(0, 4);
+            this.resultsPreview.textContent = previewLines.join('\n');
+        } else {
+            // JSON format handling
+            const recordCount = Array.isArray(data) ? data.length : 1;
+            this.resultSummary.textContent = `${recordCount} records ready to export`;
+            
+            // Show preview (first 3 items)
+            const preview = Array.isArray(data) ? data.slice(0, 3) : [data];
+            this.resultsPreview.textContent = JSON.stringify(preview, null, 2);
+        }
     }
 
     showError(message) {
@@ -158,13 +191,14 @@ class ZSParser {
         if (!this.currentData) return;
 
         try {
-            // Generate suggested filename based on original input
+            // Generate suggested filename based on original input and format
             const baseName = this.currentFileName ? 
                 this.currentFileName.replace(/\.(ndjson|json)$/i, '') : 
                 'parsed_output';
-            const suggestedName = `${baseName}_parsed.json`;
+            const extension = this.currentFormat === 'csv' ? 'csv' : 'json';
+            const suggestedName = `${baseName}_parsed.${extension}`;
             
-            const result = await window.electronAPI.saveFile(this.currentData, suggestedName);
+            const result = await window.electronAPI.saveFile(this.currentData, suggestedName, this.currentFormat);
             if (result.success) {
                 alert(`File saved to: ${result.filePath}`);
             } else {
@@ -179,9 +213,16 @@ class ZSParser {
         if (!this.currentData) return;
 
         try {
-            const jsonString = JSON.stringify(this.currentData, null, 2);
-            await navigator.clipboard.writeText(jsonString);
-            alert('JSON copied to clipboard');
+            let textToCopy;
+            if (this.currentFormat === 'csv') {
+                textToCopy = this.currentData;
+            } else {
+                textToCopy = JSON.stringify(this.currentData, null, 2);
+            }
+            
+            await navigator.clipboard.writeText(textToCopy);
+            const formatName = this.currentFormat.toUpperCase();
+            alert(`${formatName} copied to clipboard`);
         } catch (error) {
             this.showError('Copy failed: ' + error.message);
         }
@@ -194,21 +235,31 @@ class ZSParser {
                 return;
             }
 
-            const jsonString = JSON.stringify(this.currentData, null, 2);
-            const blob = new Blob([jsonString], { type: 'application/json' });
+            let dataString, mimeType, extension;
+            if (this.currentFormat === 'csv') {
+                dataString = this.currentData;
+                mimeType = 'text/csv';
+                extension = 'csv';
+            } else {
+                dataString = JSON.stringify(this.currentData, null, 2);
+                mimeType = 'application/json';
+                extension = 'json';
+            }
             
-            // Generate filename based on original input
+            const blob = new Blob([dataString], { type: mimeType });
+            
+            // Generate filename based on original input and format
             const baseName = this.currentFileName ? 
                 this.currentFileName.replace(/\.(ndjson|json)$/i, '') : 
                 'parsed_output';
-            const fileName = `${baseName}_parsed_${new Date().getTime()}.json`;
+            const fileName = `${baseName}_parsed_${new Date().getTime()}.${extension}`;
             
             // Create a temporary URL for the blob
             const url = URL.createObjectURL(blob);
             
             // Set up drag data
-            e.dataTransfer.setData('DownloadURL', `application/json:${fileName}:${url}`);
-            e.dataTransfer.setData('text/plain', jsonString);
+            e.dataTransfer.setData('DownloadURL', `${mimeType}:${fileName}:${url}`);
+            e.dataTransfer.setData('text/plain', dataString);
             e.dataTransfer.effectAllowed = 'copy';
         });
 

@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  parseFile: (filePath) => ipcRenderer.invoke('parse-file', filePath),
-  saveFile: (data, suggestedName) => ipcRenderer.invoke('save-file', data, suggestedName),
+  parseFile: (filePath, format) => ipcRenderer.invoke('parse-file', filePath, format),
+  saveFile: (data, suggestedName, format) => ipcRenderer.invoke('save-file', data, suggestedName, format),
   cleanupTempFile: (filePath) => ipcRenderer.invoke('cleanup-temp-file', filePath)
 });
