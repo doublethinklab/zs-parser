@@ -11,9 +11,9 @@ After you install it, you can launch it by
 ```
 ./run.sh  # Or `npm start`
 ```
+![img.png](zs-parser.png)
 
-
-## Usage 
+## CLI Usage 
 
 Parses data comes from Zeeshuimer, a firefox plugin.
 Clone the repo and install it.
