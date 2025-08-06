@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs-extra');
 const { spawn } = require('child_process');
+const os = require('os');
 
 let mainWindow;
 
@@ -40,80 +41,108 @@ app.on('activate', () => {
   }
 });
 
-// Handle file parsing
-ipcMain.handle('parse-file', async (event, filePath, format = 'csv') => {
-  try {
-    return new Promise((resolve, reject) => {
-      const pythonPath = 'python3';
-      const scriptPath = path.join(__dirname, 'src', 'zs_parser', 'main.py');
-      
-      // Generate unique output filename based on input file and format
-      const inputFileName = path.basename(filePath, path.extname(filePath));
-      const timestamp = Date.now();
-      const fileExtension = format === 'csv' ? 'csv' : 'json';
-      const outputFileName = `${inputFileName}_parsed_${timestamp}.${fileExtension}`;
-      const outputPath = path.join(__dirname, outputFileName);
-      
-      const process = spawn(pythonPath, [scriptPath, filePath, '--output', outputPath, '--format', format]);
-      
-      let stdout = '';
-      let stderr = '';
-      
-      process.stdout.on('data', (data) => {
+function getPythonExecutablePath() {
+    let executableName = 'zs-parser';
+
+    if (process.platform === 'win32') {
+        executableName += '.exe';
+    }
+
+    if (app.isPackaged) {
+        // In production, look in the extraResources folder
+        return path.join(process.resourcesPath, 'python-dist', executableName);
+    } else {
+        // In development, look in the python-dist folder
+        return path.join(__dirname, 'python-dist', executableName);
+    }
+}
+
+function handlePythonProcess(process, outputPath, format, resolve) {
+    let stdout = '';
+    let stderr = '';
+
+    process.stdout.on('data', (data) => {
         stdout += data.toString();
-      });
-      
-      process.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
-      
-      process.on('close', (code) => {
-        if (code === 0) {
-          try {
-            // Read the generated output file based on format
-            let result;
-            if (format === 'csv') {
-              result = fs.readFileSync(outputPath, 'utf8');
-            } else {
-              result = fs.readJsonSync(outputPath);
-            }
-            resolve({
-              success: true,
-              data: result,
-              logs: stderr,
-              outputPath: outputPath, // Include output path for cleanup
-              format: format
-            });
-          } catch (err) {
-            reject({
-              success: false,
-              error: `Failed to read output: ${err.message}`,
-              logs: stderr
-            });
-          }
-        } else {
-          reject({
-            success: false,
-            error: `Parser failed with code ${code}`,
-            logs: stderr
-          });
-        }
-      });
-      
-      process.on('error', (err) => {
-        reject({
-          success: false,
-          error: `Failed to start parser: ${err.message}`,
-          logs: stderr
-        });
-      });
     });
-  } catch (error) {
-    return {
-      success: false,
-      error: error.message
-    };
-  }
+
+    process.stderr.on('data', (data) => {
+        stderr += data.toString();
+    });
+
+    process.on('close', async (code) => {
+        if (code === 0) {
+            try {
+                const data = await fs.readFile(outputPath, 'utf8');
+                resolve({
+                    success: true,
+                    data: data,
+                    outputPath: outputPath,
+                    format: format,
+                    logs: stdout
+                });
+            } catch (error) {
+                resolve({
+                    success: false,
+                    error: `Failed to read output file: ${error.message}`,
+                    logs: stderr
+                });
+            }
+        } else {
+            resolve({
+                success: false,
+                error: `Python process exited with code ${code}`,
+                logs: stderr || stdout
+            });
+        }
+    });
+
+    process.on('error', (error) => {
+        resolve({
+            success: false,
+            error: `Failed to start Python process: ${error.message}`,
+            logs: stderr
+        });
+    });
+}
+
+ipcMain.handle('parse-file', async (event, filePath, format) => {
+    const tempDir = os.tmpdir();
+    const timestamp = Date.now();
+    const outputPath = path.join(tempDir, `parsed_output_${timestamp}.${format === 'csv' ? 'csv' : 'json'}`);
+
+    return new Promise((resolve) => {
+        const pythonExecutable = getPythonExecutablePath();
+        const args = [filePath, '--output', outputPath, '--format', format];
+
+        console.log('Checking for Python executable:', pythonExecutable);
+        console.log('File exists:', fs.existsSync(pythonExecutable));
+
+        if (!fs.existsSync(pythonExecutable)) {
+            console.log('Python executable not found, trying Python script...');
+            // 在開發環境下，直接使用 Python 腳本
+            const pythonScript = path.join(__dirname, 'src', 'zs_parser', 'main.py');
+            console.log('Checking for Python script:', pythonScript);
+            console.log('Script exists:', fs.existsSync(pythonScript));
+
+            if (fs.existsSync(pythonScript)) {
+                console.log('Using Python script:', 'python', [pythonScript, filePath, '--output', outputPath, '--format', format]);
+                const pythonProcess = spawn('python', [pythonScript, filePath, '--output', outputPath, '--format', format]);
+                handlePythonProcess(pythonProcess, outputPath, format, resolve);
+                return;
+            } else {
+                resolve({
+                    success: false,
+                    error: `Neither Python executable nor script found.\nExecutable: ${pythonExecutable}\nScript: ${pythonScript}\n\nPlease run 'npm run build-python' to create the Python executable.`,
+                    logs: ''
+                });
+                return;
+            }
+        }
+
+        console.log('Executing:', pythonExecutable, args.join(' '));
+        const process = spawn(pythonExecutable, args);
+        handlePythonProcess(process, outputPath, format, resolve);
+    });
 });
 
 // Handle save file dialog

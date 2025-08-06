@@ -8,8 +8,12 @@ dependencies = [
     "click>=8.2.1",
     "jsonpath-ng>=1.7.0",
     "ndjson>=0.3.1",
+    "pyinstaller>=5.13.0"
 ]
-
 
 [project.scripts]
 zs-parser = "zs_parser.main:main"
+
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"

@@ -88,10 +88,10 @@ def main():
     # Test with available NDJSON files
     test_files = [
         Path('data/zeeschuimer-export-facebook.com-2025-07-28T041835.ndjson'),
-        Path('data/zeeschuimer-export-facebook.com-2025-07-28T092148.ndjson'),
+        # Path('data/zeeschuimer-export-facebook.com-2025-07-28T092148.ndjson'),
         Path('data/tik1.json'),
         Path('data/newtik.json'),
-        Path('data/自備印泥-search-facebook.ndjson'),
+        # Path('data/自備印泥-search-facebook.ndjson'),
         Path('data/隱形墨水-鬼針草聯隊.ndjson')
     ]
     

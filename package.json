@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "build-python": "python -m PyInstaller --onefile --distpath ./python-dist --name zs-parser src/zs_parser/main.py",
     "build": "electron-builder",
     "dist": "electron-builder --publish=never"
   },
@@ -22,12 +23,36 @@
       "output": "dist"
     },
     "files": [
-      "main.js",
-      "renderer.js",
-      "index.html",
-      "styles.css",
-      "src/",
-      "node_modules/"
-    ]
+      "**/*",
+      "!**/__pycache__/*",
+      "!**/python-backend/*",
+      "!.venv/*",
+      "!build/*",
+      "!dist/*",
+      "!.claude/*",
+      "!node_modules/*"
+    ],
+    "extraResources": [
+      {
+        "from": "python-backend",
+        "to": "python-backend",
+        "filter": ["**/*"]
+      },
+      {
+        "from": ".venv",
+        "to": "venv",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+
   }
 }
