@@ -78,7 +78,11 @@ def fb_parser(lst: List[Dict]) -> List[Dict]:
         data = x.get('data', {})
         post_id = data.get('post_id')
         post_url = extract_json_path(data, '$..wwwURL')
-        creation_time = datetime.fromtimestamp(min(extract_json_path(data, '$..story.creation_time'))).strftime("%Y-%m-%d %H:%M:%S")
+        creation_times = extract_json_path(data, '$..story.creation_time')
+        if creation_times:
+            creation_time = datetime.fromtimestamp(min(creation_times)).strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            creation_time = "Unknown"
         attachments = list(set(extract_json_path(data, '$..attachments..url')))  # attachments..uri
 
         text = extract_json_path(data, "comet_sections.content.story.message.text")
@@ -91,8 +95,11 @@ def fb_parser(lst: List[Dict]) -> List[Dict]:
         else:
             reactions = []
             total_reaction_count = 0
-        comment_count = extract_json_path(data, "$..comments_count_summary_renderer.feedback.comment_rendering_instance.comments.total_count")
-        share_count = safe_int(extract_json_path(data, '$..i18n_share_count')[0])
+        comment_count_results = extract_json_path(data, "$..comments_count_summary_renderer.feedback.comment_rendering_instance.comments.total_count")
+        comment_count = comment_count_results[0] if comment_count_results else 0
+        
+        share_count_results = extract_json_path(data, '$..i18n_share_count')
+        share_count = safe_int(share_count_results[0]) if share_count_results else 0
         result_data.append(
             {
                 "post_id": post_id,
