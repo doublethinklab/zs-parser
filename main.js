@@ -41,19 +41,20 @@ app.on('activate', () => {
 });
 
 // Handle file parsing
-ipcMain.handle('parse-file', async (event, filePath) => {
+ipcMain.handle('parse-file', async (event, filePath, format = 'csv') => {
   try {
     return new Promise((resolve, reject) => {
       const pythonPath = 'python3';
       const scriptPath = path.join(__dirname, 'src', 'zs_parser', 'main.py');
       
-      // Generate unique output filename based on input file
+      // Generate unique output filename based on input file and format
       const inputFileName = path.basename(filePath, path.extname(filePath));
       const timestamp = Date.now();
-      const outputFileName = `${inputFileName}_parsed_${timestamp}.json`;
+      const fileExtension = format === 'csv' ? 'csv' : 'json';
+      const outputFileName = `${inputFileName}_parsed_${timestamp}.${fileExtension}`;
       const outputPath = path.join(__dirname, outputFileName);
       
-      const process = spawn(pythonPath, [scriptPath, filePath, '--output', outputPath]);
+      const process = spawn(pythonPath, [scriptPath, filePath, '--output', outputPath, '--format', format]);
       
       let stdout = '';
       let stderr = '';
@@ -69,13 +70,19 @@ ipcMain.handle('parse-file', async (event, filePath) => {
       process.on('close', (code) => {
         if (code === 0) {
           try {
-            // Read the generated output file
-            const result = fs.readJsonSync(outputPath);
+            // Read the generated output file based on format
+            let result;
+            if (format === 'csv') {
+              result = fs.readFileSync(outputPath, 'utf8');
+            } else {
+              result = fs.readJsonSync(outputPath);
+            }
             resolve({
               success: true,
               data: result,
               logs: stderr,
-              outputPath: outputPath // Include output path for cleanup
+              outputPath: outputPath, // Include output path for cleanup
+              format: format
             });
           } catch (err) {
             reject({
@@ -110,18 +117,29 @@ ipcMain.handle('parse-file', async (event, filePath) => {
 });
 
 // Handle save file dialog
-ipcMain.handle('save-file', async (event, data, suggestedName = 'parsed_output.json') => {
+ipcMain.handle('save-file', async (event, data, suggestedName = 'parsed_output.json', format = 'json') => {
   try {
-    const result = await dialog.showSaveDialog(mainWindow, {
-      filters: [
+    const filters = format === 'csv' ? 
+      [
+        { name: 'CSV Files', extensions: ['csv'] },
+        { name: 'All Files', extensions: ['*'] }
+      ] :
+      [
         { name: 'JSON Files', extensions: ['json'] },
         { name: 'All Files', extensions: ['*'] }
-      ],
+      ];
+    
+    const result = await dialog.showSaveDialog(mainWindow, {
+      filters: filters,
       defaultPath: suggestedName
     });
     
     if (!result.canceled) {
-      await fs.writeJson(result.filePath, data, { spaces: 2 });
+      if (format === 'csv') {
+        await fs.writeFile(result.filePath, data, 'utf8');
+      } else {
+        await fs.writeJson(result.filePath, data, { spaces: 2 });
+      }
       return { success: true, filePath: result.filePath };
     }
     

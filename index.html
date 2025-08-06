@@ -14,6 +14,22 @@
         </header>
 
         <main>
+            <div class="format-selection">
+                <h3>Output Format</h3>
+                <div class="format-options">
+                    <label class="format-option">
+                        <input type="radio" name="format" value="csv" checked>
+                        <span class="format-label">CSV</span>
+                        <span class="format-desc">Comma-separated values</span>
+                    </label>
+                    <label class="format-option">
+                        <input type="radio" name="format" value="json">
+                        <span class="format-label">JSON</span>
+                        <span class="format-desc">JavaScript Object Notation</span>
+                    </label>
+                </div>
+            </div>
+
             <div class="drop-zone" id="dropZone">
                 <div class="drop-content">
                     <div class="drop-icon">📁</div>
@@ -49,7 +65,7 @@
                     <h3>Parsing Results</h3>
                     <div class="results-actions">
                         <button class="action-btn" id="saveBtn">💾 Save File</button>
-                        <button class="action-btn" id="copyBtn">📋 Copy JSON</button>
+                        <button class="action-btn" id="copyBtn">📋 Copy Data</button>
                     </div>
                 </div>
                 
