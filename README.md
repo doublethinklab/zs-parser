@@ -1,3 +1,18 @@
+## Installation
+
+Clone the repo and install it.
+```
+./install.sh
+```
+The app will install and show up 
+
+After you install it, you can launch it by
+
+```
+./run.sh  # Or `npm start`
+```
+
+
 ## Usage 
 
 Parses data comes from Zeeshuimer, a firefox plugin.
