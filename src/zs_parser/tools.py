@@ -85,7 +85,11 @@ def fb_parser(lst: List[Dict]) -> List[Dict]:
             creation_time = "Unknown"
         attachments = list(set(extract_json_path(data, '$..attachments..url')))  # attachments..uri
 
-        text = extract_json_path(data, "comet_sections.content.story.message.text")
+        text_list = extract_json_path(data, "comet_sections.content.story.message.text")
+        if text_list:
+            text = text_list[0]
+        else:
+            text = ""
         # comet_sections.content.story.message.text
 
         reaction_counts = extract_json_path(data, '$..comet_ufi_summary_and_actions_renderer.feedback.top_reactions.edges')
