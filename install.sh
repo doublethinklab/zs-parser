@@ -89,6 +89,7 @@ fi
 
 # 7. Start Electron application
 echo "Starting Electron application..."
+source .venv/bin/activate
 npm start
 
 echo -e "${GREEN}Project setup complete and application started!${NC}"
